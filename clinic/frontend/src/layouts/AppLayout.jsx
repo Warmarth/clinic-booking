@@ -17,7 +17,8 @@ export default function AppLayout() {
   const [msg, setMsg] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
   const [mine, setMine] = useState(null);
-  const [offset, setOffset] = useState(0);
+  const [cursor, setCursor] = useState(null);
+  const [cursorHistory, setCursorHistory] = useState([]);
   const [busy, setBusy] = useState(false);
 
   const say = (text, ok = false) => setMsg({ text, ok });
@@ -32,12 +33,30 @@ export default function AppLayout() {
     catch (e) { setSlots([]); say(e.message); }
   }, [key]);
 
-  const loadMine = useCallback(async (off = 0) => {
+  const loadMine = useCallback(async (nextCursor = null) => {
     try {
-      const d = await fetchBookings(key, form.email, off);
-      setMine(d); setOffset(off);
+      const d = await fetchBookings(key, form.email, nextCursor);
+      setMine(d); setCursor(nextCursor);
     } catch (e) { say(e.message); }
   }, [key, form.email]);
+
+  function showBookings() {
+    setCursorHistory([]);
+    loadMine(null);
+  }
+
+  function nextBookingsPage() {
+    if (!mine?.next_cursor) return;
+    setCursorHistory((history) => [...history, cursor]);
+    loadMine(mine.next_cursor);
+  }
+
+  function previousBookingsPage() {
+    if (cursorHistory.length === 0) return;
+    const previousCursor = cursorHistory[cursorHistory.length - 1];
+    setCursorHistory((history) => history.slice(0, -1));
+    loadMine(previousCursor);
+  }
 
   useEffect(() => { loadSlots(); }, [loadSlots]);
 
@@ -48,7 +67,7 @@ export default function AppLayout() {
       const b = await createBooking(key, sel, form);
       setConfirmation(b); setSel(null); say("Booked!", true);
     } catch (e) { say(e.message); }
-    setBusy(false); loadSlots(); if (mine) loadMine(0);
+    setBusy(false); loadSlots(); if (mine) showBookings();
   }
 
   async function cancel(id) {
@@ -57,7 +76,7 @@ export default function AppLayout() {
       if (confirmation?.id === id) setConfirmation(b);
       say("Cancelled", true);
     } catch (e) { say(e.message); }
-    loadSlots(); if (mine) loadMine(offset);
+    loadSlots(); if (mine) loadMine(cursor);
   }
 
   return (
@@ -76,7 +95,8 @@ export default function AppLayout() {
 
       <Outlet context={{
         slots, sel, setSel, form, setForm, updateForm, book, busy, confirmation,
-        cancel, mine, offset, loadMine,
+        cancel, mine, cursorHistory, loadMine: showBookings,
+        nextBookingsPage, previousBookingsPage,
       }} />
     </main>
   );

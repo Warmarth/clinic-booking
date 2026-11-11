@@ -55,7 +55,7 @@ export RATE_WINDOW="60"
 - `GET /` — serves the booking page
 - `GET /slots` — returns all slots with availability
 - `POST /bookings` — creates a booking
-- `GET /bookings` — lists bookings, optionally filtered by email
+- `GET /bookings?limit=10&cursor=...` — returns `bookings` and `next_cursor` for cursor-based pages; optionally filter by email
 - `GET /bookings/{booking_id}` — fetches a single booking
 - `DELETE /bookings/{booking_id}` — cancels a booking
 - `POST /reset` — resets slots and clears booking data

@@ -10,8 +10,6 @@ import BookingHistory from "./components/BookingHistory.jsx";
 import SlotPicker from "./SlotPicker.jsx";
 import AppLayout from "./layouts/AppLayout.jsx";
 
-const PAGE = 5;
-
 function BookingRoute() {
   const { slots, sel, setSel, form, setForm, book, busy, confirmation, cancel } =
     useOutletContext();
@@ -31,7 +29,10 @@ function BookingRoute() {
 }
 
 function BookingsRoute() {
-  const { form, updateForm, mine, offset, loadMine, cancel } = useOutletContext();
+  const {
+    form, updateForm, mine, cursorHistory, loadMine, nextBookingsPage,
+    previousBookingsPage, cancel,
+  } = useOutletContext();
 
   return (
     <section>
@@ -46,9 +47,10 @@ function BookingsRoute() {
       </label>
       <BookingHistory
         bookings={mine}
-        offset={offset}
-        pageSize={PAGE}
+        canGoBack={cursorHistory.length > 0}
         onLoad={loadMine}
+        onNext={nextBookingsPage}
+        onPrevious={previousBookingsPage}
         onCancel={cancel}
       />
     </section>

@@ -92,19 +92,21 @@
       const $ = (id) => document.getElementById(id);
       let sel = null;
       $("key").value = localStorage.getItem("k") || "";
-      let off = 0;
+      let cursor = null;
+      let cursorHistory = [];
       const LIM = 5;
-      async function mine() {
+      async function mine(nextCursor = null) {
         const em = $("email").value.trim();
         if (!em) return show("Enter your email first", false);
-        const r = await fetch(
-          `/bookings?email=${encodeURIComponent(em)}&limit=${LIM}&offset=${off}`,
-          { headers: hdr() },
-        );
+        const params = new URLSearchParams({ email: em, limit: String(LIM) });
+        if (nextCursor) params.set("cursor", nextCursor);
+        const r = await fetch(`/bookings?${params}`, { headers: hdr() });
         const d = await r.json();
         if (!r.ok) return show(d.error, false);
-        $("list").innerHTML = d.items.length ? "" : "No bookings found.";
-        d.items.forEach((b) => {
+        cursor = nextCursor;
+        $("list").dataset.nextCursor = d.next_cursor || "";
+        $("list").innerHTML = d.bookings.length ? "" : "No bookings found.";
+        d.bookings.forEach((b) => {
           const e = document.createElement("div");
           e.className = "slot";
           e.innerHTML = `<span>Slot ${b.slot_id} — ${b.name} — <b>${b.status}</b></span>`;
@@ -116,27 +118,30 @@
                 method: "DELETE",
                 headers: hdr(),
               });
-              mine();
+              mine(cursor);
               load();
             };
             e.appendChild(c);
           }
           $("list").appendChild(e);
         });
-        $("prev").disabled = off === 0;
-        $("next").disabled = !d.has_more;
+        $("prev").disabled = cursorHistory.length === 0;
+        $("next").disabled = !d.next_cursor;
       }
       $("mine").onclick = () => {
-        off = 0;
-        mine();
+        cursorHistory = [];
+        mine(null);
       };
       $("prev").onclick = () => {
-        off = Math.max(0, off - LIM);
-        mine();
+        if (!cursorHistory.length) return;
+        const previousCursor = cursorHistory.pop();
+        mine(previousCursor);
       };
       $("next").onclick = () => {
-        off += LIM;
-        mine();
+        const nextCursor = $("list").dataset.nextCursor;
+        if (!nextCursor) return;
+        cursorHistory.push(cursor);
+        mine(nextCursor);
       };
       const hdr = () => ({
         "Content-Type": "application/json",

@@ -1,6 +1,9 @@
 """Clinic booking API (FastAPI + SQLAlchemy)."""
 
+import base64
+import binascii
 import hmac
+import json
 import os
 import re
 import threading
@@ -16,6 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from sqlalchemy import (
     Column,
     DateTime,
@@ -26,6 +30,7 @@ from sqlalchemy import (
     create_engine,
     func,
     insert,
+    or_,
     select,
     text,
     update,
@@ -116,6 +121,20 @@ seed_if_empty()
 
 # ------------------------------------------------------------------- app
 app = FastAPI(title="Clinic booking API")
+
+
+class BookingResponse(BaseModel):
+    id: str
+    slot_id: str
+    name: str
+    email: str
+    status: str
+    created_at: str
+
+
+class BookingPageResponse(BaseModel):
+    bookings: list[BookingResponse]
+    next_cursor: Optional[str]
 
 
 def err(status, message, headers=None):
@@ -314,40 +333,80 @@ async def create_booking(request: Request, idempotency_key: Optional[str] = Head
     return JSONResponse(to_dict(booking), status_code=201)
 
 
-@app.get("/bookings")
+@app.get("/bookings", response_model=BookingPageResponse)
 def list_bookings(
     email: Optional[str] = None,
     limit: int = 10,
-    offset: int = 0,
-    page: Optional[int] = None,
+    cursor: Optional[str] = None,
 ):
-    if limit < 1 or limit > 100 or offset < 0 or (page is not None and page < 1):
+    if limit < 1 or limit > 100:
         return err(400, "invalid paging parameters")
-    if page is not None:
-        offset = (page - 1) * limit
 
     query = select(bookings_t)
-    count_query = select(func.count()).select_from(bookings_t)
     if email:
         query = query.where(bookings_t.c.email == email)
-        count_query = count_query.where(bookings_t.c.email == email)
+
+    if cursor:
+        try:
+            padding = "=" * (-len(cursor) % 4)
+            cursor_data = json.loads(
+                base64.urlsafe_b64decode(cursor + padding).decode("utf-8")
+            )
+            cursor_created_at = datetime.fromisoformat(cursor_data["created_at"])
+            cursor_id = cursor_data["id"]
+            if (
+                cursor_created_at.tzinfo is None
+                or not isinstance(cursor_id, str)
+                or not cursor_id
+            ):
+                raise ValueError("invalid cursor id")
+        except (
+            binascii.Error,
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ):
+            return err(400, "invalid cursor")
+        query = query.where(
+            or_(
+                bookings_t.c.created_at > cursor_created_at,
+                (bookings_t.c.created_at == cursor_created_at)
+                & (bookings_t.c.id > cursor_id),
+            )
+        )
 
     with engine.connect() as conn:
-        total = conn.execute(count_query).scalar()
         rows = conn.execute(
-            query.order_by(bookings_t.c.created_at, bookings_t.c.id).limit(limit).offset(offset)
+            query.order_by(bookings_t.c.created_at, bookings_t.c.id).limit(limit + 1)
         ).all()
 
+    has_more = len(rows) > limit
+    page_rows = rows[:limit]
+    next_cursor = None
+    if has_more:
+        last = page_rows[-1]
+        last_created_at = last.created_at
+        if last_created_at.tzinfo is None:
+            last_created_at = last_created_at.replace(tzinfo=timezone.utc)
+        next_cursor = base64.urlsafe_b64encode(
+            json.dumps(
+                {
+                    "created_at": last_created_at.isoformat(),
+                    "id": last.id,
+                },
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).decode("ascii").rstrip("=")
+
     return {
-        "items": [to_dict(r) for r in rows],
-        "total": total,
-        "limit": limit,
-        "offset": offset,
-        "has_more": offset + len(rows) < total,
+        "bookings": [to_dict(row) for row in page_rows],
+        "next_cursor": next_cursor,
     }
 
 
-@app.get("/bookings/{booking_id}")
+@app.get("/bookings/{booking_id}", response_model=BookingResponse)
 def get_booking(booking_id: str):
     with engine.connect() as conn:
         booking = conn.execute(select(bookings_t).where(bookings_t.c.id == booking_id)).first()

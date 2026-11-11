@@ -34,13 +34,30 @@ assert codes.count(201) == 1 and codes.count(409) == 9
 r1 = c.post("/bookings", headers={**H, "Idempotency-Key": "q"}, json=good).json()
 r2 = c.post("/bookings", headers={**H, "Idempotency-Key": "q"}, json=good).json()
 assert r1["id"] == r2["id"]
+booking = c.get(f"/bookings/{r1['id']}", headers=H).json()
+assert set(booking) == {"id", "slot_id", "name", "email", "status", "created_at"}
+assert booking["slot_id"] == good["slot_id"]
+assert booking["name"] == good["name"]
+assert booking["email"] == good["email"]
+assert booking["status"] == "confirmed"
+assert booking["created_at"].endswith("Z")
 assert c.delete(f"/bookings/{r1['id']}", headers=H).json()["status"] == "cancelled"
 assert c.get("/slots", headers=H).json()[0]["available"] is True
 for i in range(5):
     c.post(
         "/bookings", headers={**H, "Idempotency-Key": f"n{i}"}, json={**good, "slot_id": f"s{i+3}"}
     )
-p = c.get("/bookings?email=a@b.co&limit=2&offset=2", headers=H).json()
-print(p["total"], len(p["items"]))
+page = c.get("/bookings?email=a@b.co&limit=2", headers=H).json()
+assert set(page) == {"bookings", "next_cursor"}
+assert len(page["bookings"]) == 2 and isinstance(page["next_cursor"], str)
+seen_ids = [booking["id"] for booking in page["bookings"]]
+while page["next_cursor"]:
+    page = c.get(
+        f"/bookings?email=a@b.co&limit=2&cursor={page['next_cursor']}", headers=H
+    ).json()
+    seen_ids.extend(booking["id"] for booking in page["bookings"])
+assert len(seen_ids) == 7 and len(set(seen_ids)) == 7
+assert page["next_cursor"] is None
+assert c.get("/bookings?cursor=not-a-valid-cursor", headers=H).status_code == 400
 assert c.get("/bookings/nope", headers=H).status_code == 404
 print("OK")

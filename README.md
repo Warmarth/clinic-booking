@@ -65,7 +65,7 @@ export RATE_WINDOW="60"
 - `GET /` — serves the booking page
 - `GET /slots` — lists available and taken slots
 - `POST /bookings` — creates a confirmed booking for a selected slot
-- `GET /bookings` — lists bookings, optionally filtered by email
+- `GET /bookings?limit=10&cursor=...` — returns `bookings` and `next_cursor` for cursor-based pages; optionally filter by email
 - `GET /bookings/{booking_id}` — fetches a single booking
 - `DELETE /bookings/{booking_id}` — cancels a booking
 - `POST /reset` — clears and re-seeds appointment slots
@@ -103,8 +103,10 @@ curl -X POST \
 List bookings for an email:
 
 ```bash
-curl -H "X-API-Key: secret" "http://localhost:8000/bookings?email=jane@example.com&limit=10&offset=0"
+curl -H "X-API-Key: secret" "http://localhost:8000/bookings?email=jane@example.com&limit=10"
 ```
+
+The response contains a `bookings` array and `next_cursor`. Send that cursor as the `cursor` query parameter to fetch the next page; it is `null` on the last page.
 
 ## Notes
 

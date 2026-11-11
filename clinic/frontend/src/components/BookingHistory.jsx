@@ -1,11 +1,18 @@
-export default function BookingHistory({ bookings, offset, pageSize, onLoad, onCancel }) {
+export default function BookingHistory({
+  bookings,
+  canGoBack,
+  onLoad,
+  onNext,
+  onPrevious,
+  onCancel,
+}) {
   return (
     <>
-      <button onClick={() => onLoad(0)}>Show bookings</button>
+      <button onClick={() => onLoad(null)}>Show bookings</button>
       {bookings && (
         <>
-          {bookings.items.length === 0 && <p>No bookings found.</p>}
-          {bookings.items.map((booking) => (
+          {bookings.bookings.length === 0 && <p>No bookings found.</p>}
+          {bookings.bookings.map((booking) => (
             <div key={booking.id} className="slot">
               <span>Slot {booking.slot_id} — {booking.name} — <b>{booking.status}</b></span>
               {booking.status === "confirmed" && (
@@ -13,8 +20,8 @@ export default function BookingHistory({ bookings, offset, pageSize, onLoad, onC
               )}
             </div>
           ))}
-          <button disabled={offset === 0} onClick={() => onLoad(Math.max(0, offset - pageSize))}>Prev</button>
-          <button disabled={!bookings.has_more} onClick={() => onLoad(offset + pageSize)}>Next</button>
+          <button disabled={!canGoBack} onClick={onPrevious}>Prev</button>
+          <button disabled={!bookings.next_cursor} onClick={onNext}>Next</button>
         </>
       )}
     </>

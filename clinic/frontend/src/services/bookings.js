@@ -7,11 +7,13 @@ export async function loadSlots(key) {
   return api("/slots", { key });
 }
 
-export async function loadMine(key, email, offset = 0) {
+export async function loadMine(key, email, cursor = null) {
   if (!email.trim()) throw new Error("Enter your email first");
 
+  const params = new URLSearchParams({ email: email.trim(), limit: String(PAGE) });
+  if (cursor) params.set("cursor", cursor);
   return api(
-    `/bookings?email=${encodeURIComponent(email.trim())}&limit=${PAGE}&offset=${offset}`,
+    `/bookings?${params}`,
     { key },
   );
 }
