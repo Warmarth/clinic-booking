@@ -111,3 +111,4 @@ curl -H "X-API-Key: secret" "http://localhost:8000/bookings?email=jane@example.c
 - The app defaults to SQLite (`clinic.db`) for local development.
 - For production or shared deployments, set `DATABASE_URL` to a PostgreSQL connection string.
 - The project is intentionally lightweight and suitable for demonstration or small-clinic appointment workflows.
+- The scheduled workflow in `.github/workflows/render-keepalive.yml` pings `/health` every 10 minutes. Add the Render service base URL as a GitHub repository Actions secret named `RENDER_URL` to enable it. Keeping a Render Free instance awake uses its monthly instance hours.

@@ -6,6 +6,8 @@ from main import app
 
 c = TestClient(app)
 H = {"X-API-Key": "k"}
+assert c.get("/health").status_code == 200
+assert c.get("/health").json() == {"status": "ok"}
 missing_key = c.get("/slots")
 assert missing_key.status_code == 401
 assert missing_key.json()["error"] == "API key required"

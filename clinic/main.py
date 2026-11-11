@@ -132,12 +132,17 @@ async def on_http_error(request, exc):
     return err(exc.status_code, str(exc.detail))
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
 @app.middleware("http")
 async def require_api_key(request: Request, call_next):
     path = request.url.path
     is_open = (
         request.method == "OPTIONS"  # CORS preflight carries no key
-        or path in ("/", "/docs", "/openapi.json")
+        or path in ("/", "/docs", "/openapi.json", "/health")
         or path.startswith("/static")
     )
     if is_open:
