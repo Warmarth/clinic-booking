@@ -1,10 +1,136 @@
-body{font-family:system-ui,sans-serif;margin:0;color:#1a1a1a}
-main{max-width:760px;margin:24px auto;padding:0 16px}
-h1{font-size:1.4rem}h2{font-size:1.1rem;margin-top:24px}
-.slot{display:flex;justify-content:space-between;align-items:center;border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin:6px 0}
-.slot.taken{opacity:.5}.slot.sel{outline:2px solid #0b6}
-.card{border:1px solid #ddd;border-radius:8px;padding:12px}
-button{padding:6px 12px;border:0;border-radius:6px;background:#0b6;color:#fff;cursor:pointer;margin:4px 4px 4px 0}
-button:disabled{background:#999;cursor:not-allowed}
-input{padding:7px;margin:4px 6px 4px 0;border:1px solid #bbb;border-radius:6px}
-.msg{margin:12px 0;padding:10px;border-radius:6px}.ok{background:#e6f7ee}.bad{background:#fdecea}
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  color: #1a1a1a;
+}
+main {
+  max-width: 760px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+h1 {
+  font-size: 1.4rem;
+}
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.app-header h1 {
+  margin: 0;
+}
+nav {
+  display: flex;
+  gap: 8px;
+}
+nav a {
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #1a1a1a;
+  text-decoration: none;
+}
+nav a.active {
+  background: #e6f7ee;
+  color: #075c3a;
+}
+h2 {
+  font-size: 1.1rem;
+  margin-top: 24px;
+}
+.appointments {
+  margin: 20px 0;
+  scroll-margin-top: 16px;
+}
+.appointments-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: left;
+}
+.appointments-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms ease;
+}
+.appointments-panel.open {
+  grid-template-rows: 1fr;
+}
+.appointments-panel > * {
+  min-height: 0;
+  overflow: hidden;
+}
+.appointment-list {
+  max-height: 230px;
+  overflow: hidden;
+  transition: max-height 350ms ease;
+}
+.appointment-list.expanded {
+  max-height: 5000px;
+}
+.view-appointments {
+  display: block;
+  margin: 8px auto;
+}
+.slot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 6px 0;
+}
+.slot.taken {
+  opacity: 0.5;
+}
+.slot.sel {
+  outline: 2px solid #0b6;
+}
+.card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+}
+button {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: #0b6;
+  color: #fff;
+  cursor: pointer;
+  margin: 4px 4px 4px 0;
+}
+button:disabled {
+  background: #999;
+  cursor: not-allowed;
+}
+input {
+  padding: 7px;
+  margin: 4px 6px 4px 0;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+}
+.msg {
+  margin: 12px 0;
+  padding: 10px;
+  border-radius: 6px;
+}
+.ok {
+  background: #e6f7ee;
+}
+.bad {
+  background: #fdecea;
+}
+@media (prefers-reduced-motion: reduce) {
+  .appointments-panel,
+  .appointment-list {
+    transition: none;
+  }
+}
