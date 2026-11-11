@@ -143,8 +143,10 @@ async def require_api_key(request: Request, call_next):
     if is_open:
         return await call_next(request)
     key = request.headers.get("x-api-key", "")
-    if not key or not hmac.compare_digest(key.encode(), API_KEY.encode()):
-        return err(401, "missing or invalid API key")
+    if not key:
+        return err(401, "API key required")
+    if not hmac.compare_digest(key.encode(), API_KEY.encode()):
+        return err(401, "invalid API key")
     return await call_next(request)
 
 

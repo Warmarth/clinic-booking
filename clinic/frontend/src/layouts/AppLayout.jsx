@@ -9,7 +9,8 @@ import {
 import Message from "../components/Message.jsx";
 
 export default function AppLayout() {
-  const [key, setKey] = useState(import.meta.env.VITE_API_KEY || localStorage.getItem("k") || "");
+  const [keyInput, setKeyInput] = useState("");
+  const [key, setKey] = useState(null);
   const [slots, setSlots] = useState([]);
   const [sel, setSel] = useState(null);
   const [form, setForm] = useState({ name: "", email: "" });
@@ -23,6 +24,10 @@ export default function AppLayout() {
   const updateForm = (changes) => setForm((current) => ({ ...current, ...changes }));
 
   const loadSlots = useCallback(async () => {
+    if (!key) {
+      setSlots([]);
+      return;
+    }
     try { setSlots(await fetchSlots(key)); }
     catch (e) { setSlots([]); say(e.message); }
   }, [key]);
@@ -65,7 +70,8 @@ export default function AppLayout() {
         </nav>
       </header>
 
-      <label>API key <input type="password" value={key} onChange={(e) => setKey(e.target.value)} /></label>
+      <label>API key <input type="password" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") setKey(keyInput.trim() || null); }} placeholder="api-secret-key" /></label>
+      <button type="button" onClick={() => setKey(keyInput.trim() || null)}>Use API key</button>
       <Message message={msg} />
 
       <Outlet context={{

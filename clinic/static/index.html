@@ -1,66 +1,227 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Clinic booking</title>
-<style>
-body{font-family:system-ui,sans-serif;max-width:760px;margin:24px auto;padding:0 16px;color:#1a1a1a}
-h1{font-size:1.4rem}.slot{display:flex;justify-content:space-between;align-items:center;border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin:6px 0}
-.slot.taken{opacity:.5}button{padding:6px 12px;border:0;border-radius:6px;background:#0b6;color:#fff;cursor:pointer}
-button:disabled{background:#999;cursor:not-allowed}input{padding:7px;margin:4px 6px 4px 0;border:1px solid #bbb;border-radius:6px}
-#msg{margin:12px 0;padding:10px;border-radius:6px;display:none}.ok{background:#e6f7ee;display:block!important}.bad{background:#fdecea;display:block!important}
-.sel{outline:2px solid #0b6}
-</style></head><body>
-<h1>Book an appointment</h1>
-<div>API key: <input id="key" type="password" placeholder="X-API-Key"></div>
-<div id="msg"></div>
-<h3>Available slots</h3><div id="slots">Loading…</div>
-<h3>Your details</h3>
-<div><input id="name" placeholder="Full name"><input id="email" placeholder="Email">
-<button id="book">Book selected slot</button></div>
-<h3>Confirmation</h3><div id="conf">Nothing booked yet.</div>
-<h3>My bookings</h3>
-<div><button id="mine">Show bookings for the email above</button>
-<button id="prev">Prev</button><button id="next">Next</button></div>
-<div id="list"></div>
-<script>
-const $=id=>document.getElementById(id);let sel=null;
-$('key').value=localStorage.getItem('k')||'';
-let off=0;const LIM=5;
-async function mine(){
-  const em=$('email').value.trim();if(!em)return show('Enter your email first',false);
-  const r=await fetch(`/bookings?email=${encodeURIComponent(em)}&limit=${LIM}&offset=${off}`,{headers:hdr()});
-  const d=await r.json();if(!r.ok)return show(d.error,false);
-  $('list').innerHTML=d.items.length?'':'No bookings found.';
-  d.items.forEach(b=>{const e=document.createElement('div');e.className='slot';
-    e.innerHTML=`<span>Slot ${b.slot_id} — ${b.name} — <b>${b.status}</b></span>`;
-    if(b.status==='confirmed'){const c=document.createElement('button');c.textContent='Cancel';
-      c.onclick=async()=>{await fetch('/bookings/'+b.id,{method:'DELETE',headers:hdr()});mine();load()};e.appendChild(c)}
-    $('list').appendChild(e)});
-  $('prev').disabled=off===0;$('next').disabled=!d.has_more}
-$('mine').onclick=()=>{off=0;mine()};
-$('prev').onclick=()=>{off=Math.max(0,off-LIM);mine()};
-$('next').onclick=()=>{off+=LIM;mine()};
-const hdr=()=>({'Content-Type':'application/json','X-API-Key':$('key').value});
-const show=(t,ok)=>{$('msg').textContent=t;$('msg').className=ok?'ok':'bad'};
-const fmt=s=>new Date(s).toLocaleString([], {dateStyle:'medium',timeStyle:'short',timeZone:'UTC'})+' UTC';
-async function load(){
-  localStorage.setItem('k',$('key').value);
-  const r=await fetch('/slots',{headers:hdr()});const d=await r.json();
-  if(!r.ok){$('slots').textContent='';return show(d.error,false)}
-  $('slots').innerHTML='';
-  d.forEach(s=>{const e=document.createElement('div');e.className='slot'+(s.available?'':' taken')+(sel===s.id?' sel':'');
-    e.innerHTML=`<span><b>${s.provider}</b> — ${fmt(s.start)}</span>`;
-    const b=document.createElement('button');b.textContent=s.available?'Select':'Taken';b.disabled=!s.available;
-    b.onclick=()=>{sel=s.id;load()};e.appendChild(b);$('slots').appendChild(e)})}
-$('book').onclick=async()=>{
-  if(!sel)return show('Pick a slot first',false);
-  $('book').disabled=true;
-  const r=await fetch('/bookings',{method:'POST',headers:{...hdr(),'Idempotency-Key':crypto.randomUUID()},
-    body:JSON.stringify({slot_id:sel,name:$('name').value,email:$('email').value})});
-  const d=await r.json();$('book').disabled=false;
-  if(!r.ok){show(d.error,false);return load()}
-  show('Booked!',true);sel=null;
-  $('conf').innerHTML=`<b>Booking ${d.id}</b><br>Status: ${d.status}<br>${d.name} (${d.email})<br>Slot: ${d.slot_id}<br><button id="cx">Cancel booking</button>`;
-  $('cx').onclick=async()=>{const x=await fetch('/bookings/'+d.id,{method:'DELETE',headers:hdr()});const y=await x.json();
-    show(x.ok?'Cancelled':y.error,x.ok);if(x.ok)$('conf').textContent='Booking cancelled.';load()};
-  load()};
-$('key').onchange=load;load();
-</script></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Clinic booking</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 760px;
+        margin: 24px auto;
+        padding: 0 16px;
+        color: #1a1a1a;
+      }
+      h1 {
+        font-size: 1.4rem;
+      }
+      .slot {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin: 6px 0;
+      }
+      .slot.taken {
+        opacity: 0.5;
+      }
+      button {
+        padding: 6px 12px;
+        border: 0;
+        border-radius: 6px;
+        background: #0b6;
+        color: #fff;
+        cursor: pointer;
+      }
+      button:disabled {
+        background: #999;
+        cursor: not-allowed;
+      }
+      input {
+        padding: 7px;
+        margin: 4px 6px 4px 0;
+        border: 1px solid #bbb;
+        border-radius: 6px;
+      }
+      #msg {
+        margin: 12px 0;
+        padding: 10px;
+        border-radius: 6px;
+        display: none;
+      }
+      .ok {
+        background: #e6f7ee;
+        display: block !important;
+      }
+      .bad {
+        background: #fdecea;
+        display: block !important;
+      }
+      .sel {
+        outline: 2px solid #0b6;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Book an appointment</h1>
+    <div>
+      API key: <input id="key" type="password" placeholder="X-API-Key" />
+    </div>
+    <div id="msg"></div>
+    <h3>Available slots</h3>
+    <div id="slots">Loading…</div>
+    <h3>Your details</h3>
+    <div>
+      <input id="name" placeholder="Full name" /><input
+        id="email"
+        placeholder="Email"
+      />
+      <button id="book">Book selected slot</button>
+    </div>
+    <h3>Confirmation</h3>
+    <div id="conf">Nothing booked yet.</div>
+    <h3>My bookings</h3>
+    <div>
+      <button id="mine">Show bookings for the email above</button>
+      <button id="prev">Prev</button><button id="next">Next</button>
+    </div>
+    <div id="list"></div>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      let sel = null;
+      $("key").value = localStorage.getItem("k") || "";
+      let off = 0;
+      const LIM = 5;
+      async function mine() {
+        const em = $("email").value.trim();
+        if (!em) return show("Enter your email first", false);
+        const r = await fetch(
+          `/bookings?email=${encodeURIComponent(em)}&limit=${LIM}&offset=${off}`,
+          { headers: hdr() },
+        );
+        const d = await r.json();
+        if (!r.ok) return show(d.error, false);
+        $("list").innerHTML = d.items.length ? "" : "No bookings found.";
+        d.items.forEach((b) => {
+          const e = document.createElement("div");
+          e.className = "slot";
+          e.innerHTML = `<span>Slot ${b.slot_id} — ${b.name} — <b>${b.status}</b></span>`;
+          if (b.status === "confirmed") {
+            const c = document.createElement("button");
+            c.textContent = "Cancel";
+            c.onclick = async () => {
+              await fetch("/bookings/" + b.id, {
+                method: "DELETE",
+                headers: hdr(),
+              });
+              mine();
+              load();
+            };
+            e.appendChild(c);
+          }
+          $("list").appendChild(e);
+        });
+        $("prev").disabled = off === 0;
+        $("next").disabled = !d.has_more;
+      }
+      $("mine").onclick = () => {
+        off = 0;
+        mine();
+      };
+      $("prev").onclick = () => {
+        off = Math.max(0, off - LIM);
+        mine();
+      };
+      $("next").onclick = () => {
+        off += LIM;
+        mine();
+      };
+      const hdr = () => ({
+        "Content-Type": "application/json",
+        "X-API-Key": $("key").value,
+      });
+      const show = (t, ok) => {
+        $("msg").textContent = t;
+        $("msg").className = ok ? "ok" : "bad";
+      };
+      const fmt = (s) =>
+        new Date(s).toLocaleString([], {
+          dateStyle: "medium",
+          timeStyle: "short",
+          timeZone: "UTC",
+        }) + " UTC";
+      async function load() {
+        const key = $("key").value.trim();
+        if (!key) {
+          $("slots").textContent = "Enter your API key to load available slots.";
+          $("msg").textContent = "";
+          $("msg").className = "";
+          return;
+        }
+        localStorage.setItem("k", $("key").value);
+        const r = await fetch("/slots", { headers: hdr() });
+        const d = await r.json();
+        if (!r.ok) {
+          $("slots").textContent = "";
+          return show(d.error, false);
+        }
+        $("slots").innerHTML = "";
+        d.forEach((s) => {
+          const e = document.createElement("div");
+          e.className =
+            "slot" +
+            (s.available ? "" : " taken") +
+            (sel === s.id ? " sel" : "");
+          e.innerHTML = `<span><b>${s.provider}</b> — ${fmt(s.start)}</span>`;
+          const b = document.createElement("button");
+          b.textContent = s.available ? "Select" : "Taken";
+          b.disabled = !s.available;
+          b.onclick = () => {
+            sel = s.id;
+            load();
+          };
+          e.appendChild(b);
+          $("slots").appendChild(e);
+        });
+      }
+      $("book").onclick = async () => {
+        if (!sel) return show("Pick a slot first", false);
+        $("book").disabled = true;
+        const r = await fetch("/bookings", {
+          method: "POST",
+          headers: { ...hdr(), "Idempotency-Key": crypto.randomUUID() },
+          body: JSON.stringify({
+            slot_id: sel,
+            name: $("name").value,
+            email: $("email").value,
+          }),
+        });
+        const d = await r.json();
+        $("book").disabled = false;
+        if (!r.ok) {
+          show(d.error, false);
+          return load();
+        }
+        show("Booked!", true);
+        sel = null;
+        $("conf").innerHTML =
+          `<b>Booking ${d.id}</b><br>Status: ${d.status}<br>${d.name} (${d.email})<br>Slot: ${d.slot_id}<br><button id="cx">Cancel booking</button>`;
+        $("cx").onclick = async () => {
+          const x = await fetch("/bookings/" + d.id, {
+            method: "DELETE",
+            headers: hdr(),
+          });
+          const y = await x.json();
+          show(x.ok ? "Cancelled" : y.error, x.ok);
+          if (x.ok) $("conf").textContent = "Booking cancelled.";
+          load();
+        };
+        load();
+      };
+      $("key").onchange = load;
+      load();
+    </script>
+  </body>
+</html>

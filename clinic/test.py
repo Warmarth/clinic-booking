@@ -6,7 +6,12 @@ from main import app
 
 c = TestClient(app)
 H = {"X-API-Key": "k"}
-assert c.get("/slots").status_code == 401
+missing_key = c.get("/slots")
+assert missing_key.status_code == 401
+assert missing_key.json()["error"] == "API key required"
+invalid_key = c.get("/slots", headers={"X-API-Key": "wrong"})
+assert invalid_key.status_code == 401
+assert invalid_key.json()["error"] == "invalid API key"
 c.post("/reset", headers=H)
 assert len(c.get("/slots", headers=H).json()) == 16
 good = {"slot_id": "s1", "name": "Ada", "email": "a@b.co"}
