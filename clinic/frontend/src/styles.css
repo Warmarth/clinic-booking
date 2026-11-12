@@ -67,12 +67,12 @@ h2 {
   overflow: hidden;
 }
 .appointment-list {
-  max-height: 230px;
-  overflow: hidden;
+  max-height: min(230px, 35vh);
+  overflow-y: auto;
   transition: max-height 350ms ease;
 }
 .appointment-list.expanded {
-  max-height: 5000px;
+  max-height: min(60vh, 500px);
 }
 .view-appointments {
   display: block;
