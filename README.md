@@ -17,7 +17,12 @@ This project includes:
 
 ## Repository layout
 
-- `clinic/main.py` — FastAPI application and database setup
+- `clinic/main.py` — FastAPI application and middleware setup
+- `clinic/routes.py` — HTTP endpoints and route-specific helpers
+- `clinic/config.py` — environment-based application configuration
+- `clinic/database.py` — database engine, schema initialization, and default slot seeding
+- `clinic/models.py` — SQLAlchemy tables and Pydantic response models
+- `clinic/middlewares.py` — API-key authentication, CORS, and rate-limiting helpers
 - `clinic/static/` — booking UI served by the app
 - `clinic/frontend/` — frontend source (if present in your local checkout)
 - `clinic/requirements.txt` — Python dependencies

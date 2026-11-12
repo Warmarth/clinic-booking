@@ -14,7 +14,12 @@ A lightweight clinic appointment-booking service built with FastAPI and SQLAlche
 
 ## Project structure
 
-- `main.py` — application, DB schema, rate limiting, and route logic
+- `main.py` — application and middleware setup
+- `routes.py` — HTTP endpoints and route-specific helpers
+- `config.py` — environment-based application configuration
+- `database.py` — database engine, schema initialization, and default slot seeding
+- `models.py` — SQLAlchemy tables and Pydantic response models
+- `middlewares.py` — API-key authentication, CORS, and rate-limiting helpers
 - `static/` — browser UI for booking appointments
 - `requirements.txt` — dependencies
 - `.env` — local environment values for development
